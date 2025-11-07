@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Allow sharing files from external files directory -->
+    <external-files-path
+        name="profiler_reports"
+        path="profiler_reports/" />
+
+    <!-- Allow sharing files from root external files directory -->
+    <external-files-path
+        name="external_files"
+        path="." />
+</paths>
