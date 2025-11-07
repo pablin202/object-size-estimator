@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.tensorflow.lite.Interpreter
+import org.tensorflow.lite.gpu.CompatibilityList
 import org.tensorflow.lite.gpu.GpuDelegate
 import java.io.FileInputStream
 import java.nio.ByteBuffer
@@ -28,6 +29,19 @@ import com.meq.objectsize.domain.ProfilerHelper
 import com.meq.objectsize.domain.model.PerformanceMetrics
 import com.meq.objectsize.utils.LeakCanaryWatchers
 import org.tensorflow.lite.DataType
+
+/**
+ * Helper function to safely wrap code with Trace sections
+ * Ensures endSection is always called even if an exception occurs
+ */
+private inline fun <T> trace(sectionName: String, block: () -> T): T {
+    Trace.beginSection(sectionName)
+    return try {
+        block()
+    } finally {
+        Trace.endSection()
+    }
+}
 
 /**
  * TensorFlow Lite implementation of ObjectDetector using SSD MobileNet v1
@@ -106,18 +120,24 @@ class TFLiteObjectDetector(
             val modelBuffer = loadModelFile()
 
             // Configure interpreter options
+            val compatList = CompatibilityList()
             val options = Interpreter.Options().apply {
-                setNumThreads(4)
-
                 // GPU delegate for faster inference (optional)
-                // Requires tensorflow-lite-gpu-api to be explicitly added in dependencies
-                if (useGpu) {
+                if (useGpu && compatList.isDelegateSupportedOnThisDevice) {
                     try {
-                        gpuDelegate = GpuDelegate()
+                        val delegateOptions = compatList.bestOptionsForThisDevice
+                        gpuDelegate = GpuDelegate(delegateOptions)
                         addDelegate(gpuDelegate)
-                        Log.d(TAG, "✓ GPU delegate enabled")
+                        Log.d(TAG, "✓ GPU delegate enabled with optimized options")
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to initialize GPU delegate, falling back to CPU", e)
+                        setNumThreads(4)
+                    }
+                } else {
+                    // Run on CPU with 4 threads
+                    setNumThreads(4)
+                    if (useGpu) {
+                        Log.d(TAG, "GPU requested but not supported on this device, using CPU")
                     }
                 }
             }
@@ -185,9 +205,8 @@ class TFLiteObjectDetector(
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 
-    override suspend fun detect(bitmap: Bitmap): List<DetectionResult> = withContext(Dispatchers.Default) {
-        Trace.beginSection("ML_Detection")
-        try {
+    override suspend fun detect(bitmap: Bitmap): List<DetectionResult> = trace("ML_Detection") {
+        withContext(Dispatchers.Default) {
             val totalStartTime = System.nanoTime()
 
             val currentInterpreter = interpreter
@@ -197,11 +216,11 @@ class TFLiteObjectDetector(
                 ?: throw IllegalStateException("Input buffer not initialized")
 
             // 1. Preprocessing
-            Trace.beginSection("Preprocessing")
             val preprocessStart = System.nanoTime()
-            preprocessBitmap(bitmap, buffer)
-            val preprocessTime = (System.nanoTime() - preprocessStart) / 1_000_000 // ms
-            Trace.endSection()
+            val preprocessTime = trace("Preprocessing") {
+                preprocessBitmap(bitmap, buffer)
+                (System.nanoTime() - preprocessStart) / 1_000_000 // ms
+            }
 
             // Prepare output arrays
             val outputLocations = Array(1) { Array(ObjectDetector.MAX_DETECTIONS) { FloatArray(4) } }
@@ -210,29 +229,30 @@ class TFLiteObjectDetector(
             val numDetections = FloatArray(1)
 
             // 2. Inference
-            Trace.beginSection("TFLite_Inference")
             val inferenceStart = System.nanoTime()
-            val outputs = mapOf(
-                OUTPUT_LOCATIONS to outputLocations,
-                OUTPUT_CLASSES to outputClasses,
-                OUTPUT_SCORES to outputScores,
-                OUTPUT_NUM_DETECTIONS to numDetections
-            )
-            currentInterpreter.runForMultipleInputsOutputs(arrayOf(buffer), outputs)
-            val inferenceTime = (System.nanoTime() - inferenceStart) / 1_000_000 // ms
-            Trace.endSection()
+            val inferenceTime = trace("TFLite_Inference") {
+                val outputs = mapOf(
+                    OUTPUT_LOCATIONS to outputLocations,
+                    OUTPUT_CLASSES to outputClasses,
+                    OUTPUT_SCORES to outputScores,
+                    OUTPUT_NUM_DETECTIONS to numDetections
+                )
+                currentInterpreter.runForMultipleInputsOutputs(arrayOf(buffer), outputs)
+                (System.nanoTime() - inferenceStart) / 1_000_000 // ms
+            }
 
             // 3. Postprocessing
-            Trace.beginSection("Postprocessing")
             val postprocessStart = System.nanoTime()
-            val results = parseDetections(
-                locations = outputLocations[0],
-                classes = outputClasses[0],
-                scores = outputScores[0],
-                numDetections = numDetections[0].toInt()
-            )
-            val postprocessTime = (System.nanoTime() - postprocessStart) / 1_000_000 // ms
-            Trace.endSection()
+            val (results, postprocessTime) = trace("Postprocessing") {
+                val res = parseDetections(
+                    locations = outputLocations[0],
+                    classes = outputClasses[0],
+                    scores = outputScores[0],
+                    numDetections = numDetections[0].toInt()
+                )
+                val time = (System.nanoTime() - postprocessStart) / 1_000_000 // ms
+                res to time
+            }
 
             // Calculate metrics
             val totalTime = (System.nanoTime() - totalStartTime) / 1_000_000 // ms
@@ -276,9 +296,7 @@ class TFLiteObjectDetector(
                 }
             }
 
-            return@withContext results
-        } finally {
-            Trace.endSection()
+            results
         }
     }
 
@@ -305,15 +323,6 @@ class TFLiteObjectDetector(
         """.trimIndent())
     }
 
-    fun getPerformanceStats(): Map<String, Any> {
-        return mapOf(
-            "avgInferenceMs" to performanceMonitor.getAverageInferenceTime(),
-            "avgFps" to performanceMonitor.getAverageFps(),
-            "currentMemoryMb" to performanceMonitor.getCurrentMemoryMb(),
-            "maxMemoryMb" to performanceMonitor.getMaxMemoryMb()
-        )
-    }
-
     /**
      * Preprocess bitmap to model input format
      * - Resize to 300x300
@@ -332,8 +341,8 @@ class TFLiteObjectDetector(
 
         // Convert to bytes (UInt8 format: 0-255)
         var pixel = 0
-        for (i in 0 until INPUT_SIZE) {
-            for (j in 0 until INPUT_SIZE) {
+        repeat(INPUT_SIZE) {
+            repeat(INPUT_SIZE) {
                 val value = intValues[pixel++]
 
                 // Extract RGB channels as bytes (0-255)
