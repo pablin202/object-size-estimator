@@ -216,15 +216,56 @@ app/
 
 ## Testing
 
-To run tests:
+The project includes unit tests covering core business logic and architecture patterns:
+
+### Unit Tests
+
+**Domain Layer Tests:**
+- `SizeCalculatorTest`: Pure logic tests for size estimation calculations
+  - Reference object dimension validation
+  - Proportional size calculations
+  - Edge cases and null handling
+
+- `PerformanceMonitorTest`: Metrics aggregation and FPS calculations
+  - Rolling window behavior (30 samples max)
+  - Average inference time calculations
+  - Memory tracking
+
+**UI Layer Tests:**
+- `CameraViewModelTest`: Flow-based reactive architecture testing
+  - StateFlow emissions and state management
+  - Coroutine testing with `TestDispatcher`
+  - Flow collection from `CameraManager`
+  - User action handling (pause, clear, snapshot)
+  - Uses MockK for mocking and Turbine for Flow testing
+
+### Running Tests
+
+**Note**: There's a known issue with Gradle 8.11+ and Java 24 that prevents running tests via `./gradlew test` command (error: "Type T not present"). The tests compile successfully and can be run from Android Studio.
 
 ```bash
-# Unit tests
+# Verify tests compile correctly
+./gradlew compileDebugUnitTestKotlin
+
+# Run tests from Android Studio (RECOMMENDED)
+# Right-click on test directory → Run 'Tests in com.meq.objectsize'
+# Or right-click individual test file → Run 'TestClassName'
+
+# Workaround for command line: Use Java 17 or 21
+# Set JAVA_HOME to Java 17/21, then:
 ./gradlew test
 
 # Instrumented tests (requires device/emulator)
 ./gradlew connectedAndroidTest
 ```
+
+### Test Technologies
+
+- **JUnit 4**: Test framework
+- **MockK**: Kotlin-friendly mocking library
+- **Truth**: Fluent assertions from Google
+- **Turbine**: Flow testing library from Cash App
+- **Coroutines Test**: Testing utilities for coroutines and Flow
 
 ## License
 

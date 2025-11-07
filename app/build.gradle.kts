@@ -8,9 +8,7 @@ plugins {
 
 android {
     namespace = "com.meq.objectsize"
-    compileSdk {
-        version = release(36)
-    }
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.meq.objectsize"
@@ -41,6 +39,13 @@ android {
     buildFeatures {
         buildConfig = true
     }
+
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+            isIncludeAndroidResources = false
+        }
+    }
 }
 
 kotlin {
@@ -59,8 +64,6 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
     // AndroidX Core
@@ -87,13 +90,31 @@ dependencies {
     implementation(libs.bundles.coroutines)
 
     // LeakCanary - Memory leak detection (DEBUG only)
-    debugImplementation("com.squareup.leakcanary:leakcanary-android:2.12")
+    debugImplementation(libs.leakcanary.android)
     // Plumber - Detects Android framework leaks (Activity, Fragment, ViewModel, etc.)
-    debugImplementation("com.squareup.leakcanary:plumber-android:2.12")
+    debugImplementation(libs.plumber.android)
     // Note: leakcanary-object-watcher-android is included transitively in leakcanary-android
 
     // Testing
     testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.truth)
+    testImplementation(libs.turbine)
+    testImplementation(libs.kotlinx.coroutines.test)
+
+    // Android Testing
     androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.androidx.rules)
+    androidTestImplementation(libs.truth)
+
+    // Compose Testing
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.ui.test.junit4)
+    debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Coroutines testing
+    androidTestImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.espresso.core)
 }
