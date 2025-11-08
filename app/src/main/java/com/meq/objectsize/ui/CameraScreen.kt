@@ -10,6 +10,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -24,7 +26,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.meq.objectsize.domain.model.DetectionResult
 import com.meq.objectsize.domain.model.PerformanceMetrics
-import com.meq.objectsize.utils.PermissionsHelper
 import kotlinx.coroutines.launch
 
 /**
@@ -58,12 +59,11 @@ fun CameraScreen(
         }
     }
 
-    // Start camera when permission granted
+    // Start camera when screen is displayed
+    // Note: MainActivity ensures this screen is only shown when permission is granted
     LaunchedEffect(Unit) {
-        if (PermissionsHelper.hasCameraPermission(context)) {
-            scope.launch {
-                viewModel.cameraManager.startCamera(lifecycleOwner, previewView)
-            }
+        scope.launch {
+            viewModel.cameraManager.startCamera(lifecycleOwner, previewView)
         }
     }
 
@@ -133,7 +133,11 @@ fun DetectionOverlay(
 ) {
     val textMeasurer = rememberTextMeasurer()
 
-    Canvas(modifier = modifier) {
+    Canvas(
+        modifier = modifier.semantics {
+            contentDescription = "Detection overlay"
+        }
+    ) {
         val canvasWidth = size.width
         val canvasHeight = size.height
 
