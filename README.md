@@ -339,6 +339,97 @@ The project includes instrumented tests that run on an Android device/emulator t
 - **Compose Test**: Jetpack Compose testing framework
 - **AndroidX Test**: Core Android testing library with rules and runners
 
+## 📊 Performance Analysis
+
+### Real-time Metrics
+
+| Metric | Value | Status |
+|--------|-------|--------|
+| **Inference Time** | 17-20ms per frame | ✅ Excellent |
+| **FPS** | 20-25 fps | ✅ Real-time |
+| **Memory Usage** | ~248MB stable | ✅ Efficient |
+| **Memory Leaks** | 0 detected | ✅ Clean |
+| **CPU Usage** | 45-60% average | ✅ Optimized |
+
+### ML Pipeline Breakdown
+
+| Phase | Time | Percentage |
+|-------|------|------------|
+| Preprocessing | ~12ms | 40% |
+| TFLite Inference | ~5ms | 17% |
+| Postprocessing | <1ms | <1% |
+| **Total Pipeline** | **~17ms** | **Real-time capable** |
+
+### Profiler Analysis
+
+<div align="center">
+
+#### CPU Performance - Flame Chart
+<img src="screenshots/profiler_cpu_flame_chart.png" width="700"/>
+<br/>
+<em>Thread distribution showing ML processing on background threads</em>
+
+#### CPU Breakdown - ML Detection
+<img src="screenshots/profiler_cpu_topdown_ml_breakdown.png" width="700"/>
+<br/>
+<em>Detailed timing of preprocessing, inference, and postprocessing phases</em>
+
+#### Memory Usage Timeline
+<img src="screenshots/profiler_memory_timeline.png" width="700"/>
+<br/>
+<em>Stable memory consumption (~248MB) with no leaks detected</em>
+
+#### Memory Heap Analysis
+<img src="screenshots/profiler_memory_heap_dump.png" width="700"/>
+<br/>
+<em>Heap dump showing efficient object allocation</em>
+
+</div>
+
+### Memory Leak Detection
+
+**Status: ✅ Zero memory leaks detected**
+
+<div align="center">
+<img src="screenshots/leakcanary_no_leaks.png" width="250"/>
+<br/>
+<em>LeakCanary verification after extensive testing</em>
+</div>
+
+**Testing coverage:**
+- 20+ app restart cycles
+- 10+ device rotations
+- 15+ background/foreground transitions
+- Continuous 15-minute detection session
+
+### Key Optimizations
+
+✅ **GPU Acceleration** - TensorFlow Lite GPU delegate for faster inference  
+✅ **ByteBuffer Reuse** - Pre-allocated buffers to avoid allocations  
+✅ **Efficient Data Types** - UInt8 (1 byte) instead of Float32 (4 bytes)  
+✅ **Background Processing** - Coroutines with Dispatchers.Default  
+✅ **Bitmap Recycling** - Proper cleanup to prevent memory leaks  
+✅ **Lifecycle Management** - Camera and ML resources properly released
+
+### Performance Tools Used
+
+- Android Studio Profiler (CPU, Memory)
+- LeakCanary 2.12
+- System Trace Analysis
+- Layout Inspector
+
+---
+
+## 📸 Screenshots
+
+<div align="center">
+
+### Object Detection
+<img src="screenshots/app_detection.png" width="250"/>
+
+
+</div>
+
 ## License
 
 This project is for educational and demonstration purposes.
