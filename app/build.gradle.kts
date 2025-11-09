@@ -46,6 +46,38 @@ android {
             isIncludeAndroidResources = false
         }
     }
+
+    lint {
+        // Baseline file for existing issues
+        baseline = file("lint-baseline.xml")
+
+        // Fail build on errors
+        abortOnError = true
+
+        // Check for fatal issues during release builds
+        checkReleaseBuilds = true
+
+        // Enable all checks
+        checkAllWarnings = true
+
+        // Disable specific checks if needed
+        disable += setOf(
+            "OldTargetApi",
+            "GradleDependency"
+        )
+
+        // Treat specific warnings as errors
+        error += setOf(
+            "StopShip",
+            "NewApi",
+            "InlinedApi"
+        )
+
+        // Generate reports
+        htmlReport = true
+        xmlReport = true
+        textReport = false
+    }
 }
 
 kotlin {

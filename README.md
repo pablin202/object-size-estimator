@@ -192,6 +192,35 @@ app/
   - All scopes cancelled on cleanup, triggering garbage collection
 - **Zero Memory Overhead in Release**: LeakCanary only included in debug builds
 
+### Code Quality & Static Analysis
+
+For this project, I focused on performance analysis and memory leak detection with LeakCanary, which is critical for ML-powered applications. Android Lint is also configured with strict error checking for release builds.
+
+In production projects, I typically use **ktlint** for code style consistency and automated formatting. However, for this demo I prioritized performance monitoring and comprehensive testing given the ML/Camera context, which has special resource management considerations:
+
+- **Memory pressure** from camera buffers and TensorFlow Lite model
+- **Thread management** for real-time inference
+- **Lifecycle complexities** with CameraX and coroutine scopes
+- **GPU resource allocation** for accelerated inference
+
+**Android Lint Configuration:**
+- Strict error checking on critical issues (`StopShip`, `NewApi`, `InlinedApi`)
+- Baseline file for tracking and managing existing issues
+- Automated checks during CI/CD pipeline
+- HTML and XML reports generated for review
+
+**Running Lint:**
+```bash
+# Run Lint checks
+./gradlew lint
+
+# Generate baseline file (first time setup)
+./gradlew lintDebug --continue
+
+# View HTML report
+open app/build/reports/lint-results-debug.html
+```
+
 ### Performance Optimizations
 
 - **Frame Throttling**: 100ms minimum between frames (~10 FPS)
@@ -259,6 +288,47 @@ The project includes unit tests covering core business logic and architecture pa
 ./gradlew connectedAndroidTest
 ```
 
+### Instrumented Tests (UI Tests)
+
+The project includes instrumented tests that run on an Android device/emulator to verify UI components and integration with the Android framework:
+
+**Component Tests:**
+- `PerformanceMonitorTest`: Tests for performance metrics tracking
+  - Given-When-Then pattern for clarity
+  - Validates average inference time calculations
+  - Tests rolling window behavior with max samples
+
+- `CameraScreenTest`: Jetpack Compose UI tests for PerformanceOverlay
+  - Tests performance metrics display
+  - Validates FPS, inference time, and memory usage rendering
+  - Tests null state handling
+
+- `DetectionOverlayTest`: Tests for object detection overlay rendering
+  - Validates detection bounding box display
+  - Tests with multiple detections and empty state
+  - Uses normalized coordinates (0.0-1.0)
+
+**Integration Tests:**
+- `TFLiteObjectDetectorTest`: Real TensorFlow Lite model integration tests
+  - Tests detector initialization with actual TFLite model
+  - Validates bitmap preprocessing and detection pipeline
+  - Tests detection result filtering by confidence threshold
+  - Verifies metrics flow accessibility
+
+- `CameraIntegrationTest`: Full app integration tests
+  - Tests app launch without crashes
+  - Validates camera permission flow
+  - Uses `GrantPermissionRule` for automatic permission granting
+
+**Running Instrumented Tests:**
+```bash
+# Run all instrumented tests (requires connected device/emulator)
+./gradlew connectedAndroidTest
+
+# Run specific test class
+./gradlew connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=meq.objectsize.ml.TFLiteObjectDetectorTest
+```
+
 ### Test Technologies
 
 - **JUnit 4**: Test framework
@@ -266,6 +336,8 @@ The project includes unit tests covering core business logic and architecture pa
 - **Truth**: Fluent assertions from Google
 - **Turbine**: Flow testing library from Cash App
 - **Coroutines Test**: Testing utilities for coroutines and Flow
+- **Compose Test**: Jetpack Compose testing framework
+- **AndroidX Test**: Core Android testing library with rules and runners
 
 ## License
 
