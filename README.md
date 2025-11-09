@@ -391,7 +391,7 @@ The project includes instrumented tests that run on an Android device/emulator t
 **Status: ✅ Zero memory leaks detected**
 
 <div align="center">
-<img src="screenshots/leakcanary_no_leaks.png" width="250"/>
+<img src="screenshots/leakcanary_no_leaks.jpg" width="250"/>
 <br/>
 <em>LeakCanary verification after extensive testing</em>
 </div>
@@ -425,7 +425,7 @@ The project includes instrumented tests that run on an Android device/emulator t
 <div align="center">
 
 ### Object Detection
-<img src="screenshots/app_detection.png" width="250"/>
+<img src="screenshots/app_detection.jpg" width="250"/>
 
 
 </div>
