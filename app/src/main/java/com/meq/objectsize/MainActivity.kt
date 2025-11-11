@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.meq.objectsize.feature.camera.CameraScreen
+import com.meq.objectsize.feature.settings.SettingsScreen
 import com.meq.objectsize.ui.theme.ObjectSizeEstimatorTheme
 import com.meq.objectsize.core.common.PermissionsHelper
 import dagger.hilt.android.AndroidEntryPoint
@@ -44,6 +45,9 @@ class MainActivity : ComponentActivity() {
     // Permission state - triggers recomposition when changed
     private var hasPermission by mutableStateOf(false)
     private var permissionDenied by mutableStateOf(false)
+
+    // Navigation state
+    private var showSettings by mutableStateOf(false)
 
     // Permission launcher
     private val requestPermissionLauncher = registerForActivityResult(
@@ -76,8 +80,16 @@ class MainActivity : ComponentActivity() {
                 ) {
                     when {
                         hasPermission -> {
-                            // Permission granted - show camera
-                            CameraScreen()
+                            // Permission granted - show camera or settings
+                            if (showSettings) {
+                                SettingsScreen(
+                                    onNavigateBack = { showSettings = false }
+                                )
+                            } else {
+                                CameraScreen(
+                                    onNavigateToSettings = { showSettings = true }
+                                )
+                            }
                         }
                         permissionDenied -> {
                             // Permission denied - show error screen

@@ -57,16 +57,20 @@ private inline fun <T> trace(sectionName: String, block: () -> T): T {
  *
  * @param context Android context for accessing assets
  * @param useGpu Whether to use GPU delegate (faster but requires compatible device)
+ * @param numThreads Number of CPU threads to use (when not using GPU)
  * @param performanceMonitor Performance metrics monitor
  * @param profilerHelper Profiler helper for capturing performance snapshots
  * @param confidenceThreshold Minimum confidence score for a detection to be considered
+ * @param performanceRefreshRate How often to log performance metrics (in milliseconds)
  */
 class TFLiteObjectDetector(
     private val context: Context,
     private val useGpu: Boolean = false,
+    val numThreads: Int = 4,
     private val performanceMonitor: PerformanceMonitor,
     private val profilerHelper: ProfilerHelper? = null,
-    private val confidenceThreshold: Float = ObjectDetector.DEFAULT_CONFIDENCE_THRESHOLD
+    private val confidenceThreshold: Float = ObjectDetector.DEFAULT_CONFIDENCE_THRESHOLD,
+    private val performanceRefreshRate: Long = 1000L
 ) : ObjectDetector {
 
     private var interpreter: Interpreter? = null
@@ -91,6 +95,9 @@ class TFLiteObjectDetector(
     // Detection tracking for profiler snapshots
     private var detectionCount = 0
     private val snapshotInterval = 50  // Capture snapshot every 50 detections
+
+    // Performance logging throttle
+    private var lastLogTimestamp = 0L
 
     companion object {
         private const val TAG = "TFLiteObjectDetector"
@@ -132,14 +139,15 @@ class TFLiteObjectDetector(
                         Log.d(TAG, "✓ GPU delegate enabled with optimized options")
                     } catch (e: Exception) {
                         Log.w(TAG, "Failed to initialize GPU delegate, falling back to CPU", e)
-                        setNumThreads(4)
+                        setNumThreads(numThreads)
                     }
                 } else {
-                    // Run on CPU with 4 threads
-                    setNumThreads(4)
+                    // Run on CPU with configured threads
+                    setNumThreads(numThreads)
                     if (useGpu) {
                         Log.d(TAG, "GPU requested but not supported on this device, using CPU")
                     }
+                    Log.d(TAG, "Using $numThreads CPU threads")
                 }
             }
 
@@ -278,10 +286,12 @@ class TFLiteObjectDetector(
                 Log.w(TAG, "Metrics buffer full, dropping sample (backpressure)")
             }
 
-            // Log every 30s
+            // Log based on performanceRefreshRate setting
+            val currentTime = System.currentTimeMillis()
             if (performanceMonitor.getAverageInferenceTime() > 0 &&
-                System.currentTimeMillis() % 1000 < 100) {
+                currentTime - lastLogTimestamp >= performanceRefreshRate) {
                 logPerformanceMetrics(metrics)
+                lastLogTimestamp = currentTime
             }
 
             // Capture profiler snapshot periodically

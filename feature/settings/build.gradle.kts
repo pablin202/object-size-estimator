@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.meq.objectsize.feature.camera"
+    namespace = "com.meq.objectsize.feature.settings"
     compileSdk = 36
 
     defaultConfig {
@@ -32,12 +32,8 @@ kotlin {
 }
 
 dependencies {
-    // Domain
+    // Domain ONLY - follows Clean Architecture
     implementation(project(":domain"))
-
-    // Core modules (infrastructure)
-    implementation(project(":core:camera"))
-    implementation(project(":core:performance"))
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
@@ -50,11 +46,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.compose.material.icons.extended)
     debugImplementation(libs.androidx.compose.ui.tooling)
-
-    // CameraX (for PreviewView)
-    implementation(libs.androidx.camera.view)
 
     // Coroutines
     implementation(libs.bundles.coroutines)
@@ -70,15 +63,4 @@ dependencies {
     testImplementation(libs.truth)
     testImplementation(libs.turbine)
     testImplementation(libs.kotlinx.coroutines.test)
-
-    // Android Testing
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.runner)
-    androidTestImplementation(libs.androidx.rules)
-    androidTestImplementation(libs.truth)
-
-    // Compose Testing
-    androidTestImplementation(platform(libs.androidx.compose.bom))
-    androidTestImplementation(libs.androidx.ui.test.junit4)
-    debugImplementation(libs.androidx.ui.test.manifest)
 }

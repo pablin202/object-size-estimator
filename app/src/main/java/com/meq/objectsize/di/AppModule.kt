@@ -4,12 +4,15 @@ import android.content.Context
 import com.meq.objectsize.core.performance.PerformanceMonitor
 import com.meq.objectsize.core.performance.ProfilerHelper
 import com.meq.objectsize.domain.repository.ObjectDetector
+import com.meq.objectsize.domain.repository.SettingsRepository
 import com.meq.objectsize.core.ml.TFLiteObjectDetector
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import javax.inject.Singleton
 
 /**
@@ -36,19 +39,29 @@ object AppModule {
      *
      * Uses @Provides because ObjectDetector is an interface
      * and we need to specify the implementation
+     *
+     * Note: Uses runBlocking to read initial settings synchronously at startup.
+     * Changes to GPU/threads settings require app restart to take effect.
      */
     @Provides
     @Singleton
     fun provideObjectDetector(
         @ApplicationContext context: Context,
         performanceMonitor: PerformanceMonitor,
-        profilerHelper: ProfilerHelper
+        profilerHelper: ProfilerHelper,
+        settingsRepository: SettingsRepository
     ): ObjectDetector {
+        // Read initial settings synchronously at app startup
+        val settings = runBlocking { settingsRepository.settings.first() }
+
         return TFLiteObjectDetector(
             context = context,
-            useGpu = true,  // GPU works with 2.16.1 when tensorflow-lite-gpu-api is explicitly added
+            useGpu = settings.enableGpuDelegate,
+            numThreads = settings.numThreads,
             performanceMonitor = performanceMonitor,
-            profilerHelper = profilerHelper
+            profilerHelper = profilerHelper,
+            confidenceThreshold = settings.confidenceThreshold,
+            performanceRefreshRate = settings.performanceRefreshRate
         )
     }
 

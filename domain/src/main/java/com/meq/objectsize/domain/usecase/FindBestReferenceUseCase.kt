@@ -17,11 +17,13 @@ class FindBestReferenceUseCase @Inject constructor() {
      *
      * @param detections List of detected objects
      * @param preferredLabels List of preferred reference object labels
+     * @param minConfidence Minimum confidence threshold for reference object
      * @return Best reference object or null if none found
      */
     operator fun invoke(
         detections: List<DetectionResult>,
-        preferredLabels: List<String> = DEFAULT_REFERENCE_OBJECTS
+        preferredLabels: List<String> = DEFAULT_REFERENCE_OBJECTS,
+        minConfidence: Float = MIN_REFERENCE_CONFIDENCE
     ): DetectionResult? {
         // Try preferred objects first
         for (label in preferredLabels) {
@@ -29,14 +31,14 @@ class FindBestReferenceUseCase @Inject constructor() {
                 .filter { it.label.equals(label, ignoreCase = true) }
                 .maxByOrNull { it.confidence }
 
-            if (match != null && match.isValid(MIN_REFERENCE_CONFIDENCE)) {
+            if (match != null && match.isValid(minConfidence)) {
                 return match
             }
         }
 
         // Fallback: highest confidence detection
         return detections
-            .filter { it.isValid(MIN_REFERENCE_CONFIDENCE) }
+            .filter { it.isValid(minConfidence) }
             .maxByOrNull { it.confidence }
     }
 

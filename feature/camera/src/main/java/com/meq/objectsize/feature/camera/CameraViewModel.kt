@@ -5,8 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.meq.objectsize.core.camera.CameraManager
 import com.meq.objectsize.core.performance.ProfilerHelper
+import com.meq.objectsize.domain.repository.SettingsRepository
 import com.meq.objectsize.domain.usecase.CalculateObjectSizeUseCase
 import com.meq.objectsize.domain.usecase.FindBestReferenceUseCase
+import com.meq.objectsize.domain.entity.AppSettings
 import com.meq.objectsize.domain.entity.SizeEstimate
 import com.meq.objectsize.domain.entity.DetectionResult
 import com.meq.objectsize.domain.entity.PerformanceMetrics
@@ -29,7 +31,8 @@ class CameraViewModel @Inject constructor(
     val cameraManager: CameraManager,
     private val calculateObjectSize: CalculateObjectSizeUseCase,
     private val findBestReference: FindBestReferenceUseCase,
-    private val profilerHelper: ProfilerHelper
+    private val profilerHelper: ProfilerHelper,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     // UI State
@@ -39,7 +42,18 @@ class CameraViewModel @Inject constructor(
     // Performance metrics from camera manager
     val performanceMetrics: StateFlow<PerformanceMetrics?> = cameraManager.performanceMetrics
 
+    // Current settings (exposed for UI)
+    private val _currentSettings = MutableStateFlow(AppSettings.DEFAULT)
+    val currentSettings: StateFlow<AppSettings> = _currentSettings.asStateFlow()
+
     init {
+        // Collect settings
+        viewModelScope.launch {
+            settingsRepository.settings.collect { settings ->
+                _currentSettings.value = settings
+            }
+        }
+
         // Collect detections from camera
         viewModelScope.launch {
             cameraManager.detections.collect { detections ->
@@ -61,18 +75,35 @@ class CameraViewModel @Inject constructor(
             return
         }
 
-        // Find reference object
-        val reference = findBestReference(detections)
+        // Filter detections based on confidence threshold and max objects
+        val filteredDetections = detections
+            .filter { it.confidence >= _currentSettings.value.confidenceThreshold }
+            .take(_currentSettings.value.maxObjects)
+
+        if (filteredDetections.isEmpty()) {
+            _uiState.update { it.copy(
+                detections = emptyList(),
+                measurements = emptyMap(),
+                referenceObject = null
+            )}
+            return
+        }
+
+        // Find reference object (using confidence threshold from settings)
+        val reference = findBestReference(
+            detections = filteredDetections,
+            minConfidence = _currentSettings.value.confidenceThreshold
+        )
 
         // Calculate sizes if we have a reference
         val measurements = if (reference != null) {
-            calculateSizes(detections, reference)
+            calculateSizes(filteredDetections, reference)
         } else {
             emptyMap()
         }
 
         _uiState.update { it.copy(
-            detections = detections,
+            detections = filteredDetections,
             referenceObject = reference,
             measurements = measurements
         )}
@@ -80,13 +111,15 @@ class CameraViewModel @Inject constructor(
 
     /**
      * Calculate sizes for all detected objects
+     * Uses reference object sizes from settings
      */
     private fun calculateSizes(
         detections: List<DetectionResult>,
         reference: DetectionResult
     ): Map<String, SizeEstimate> {
-        // Get known size for reference object
-        val (refWidth, refHeight) = FindBestReferenceUseCase.KNOWN_OBJECT_SIZES[reference.label]
+        // Get known size for reference object from settings
+        val referenceObjectSizes = _currentSettings.value.getReferenceObjectSizes()
+        val (refWidth, refHeight) = referenceObjectSizes[reference.label]
             ?: return emptyMap()
 
         val measurements = mutableMapOf<String, SizeEstimate>()
@@ -97,7 +130,8 @@ class CameraViewModel @Inject constructor(
                 referenceBox = reference.boundingBox,
                 targetBox = detection.boundingBox,
                 referenceRealWidth = refWidth,
-                referenceRealHeight = refHeight
+                referenceRealHeight = refHeight,
+                samePlaneThreshold = _currentSettings.value.samePlaneThreshold
             )
 
             if (estimate != null) {

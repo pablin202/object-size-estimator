@@ -9,6 +9,7 @@ import androidx.camera.core.ImageProxy
 import com.meq.objectsize.domain.entity.DetectionResult
 import com.meq.objectsize.domain.entity.PerformanceMetrics
 import com.meq.objectsize.domain.repository.ObjectDetector
+import com.meq.objectsize.domain.repository.SettingsRepository
 import com.meq.objectsize.core.common.ImageUtils
 import com.meq.objectsize.core.common.LeakCanaryWatchers
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +19,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /**
@@ -36,9 +39,11 @@ import javax.inject.Inject
  * - Multiple collectors support
  *
  * @param objectDetector ML model for object detection
+ * @param settingsRepository Repository for reading app settings
  */
 class ImageAnalyzer @Inject constructor(
-    private val objectDetector: ObjectDetector
+    private val objectDetector: ObjectDetector,
+    private val settingsRepository: SettingsRepository
 ) : ImageAnalysis.Analyzer {
 
     // CoroutineScope tied to analyzer lifecycle
@@ -57,12 +62,20 @@ class ImageAnalyzer @Inject constructor(
     // Forward detector's metrics flow (no need to re-emit)
     val metricsFlow: SharedFlow<PerformanceMetrics> = objectDetector.metricsFlow
 
-    // FPS throttling
+    // FPS throttling - read from settings at initialization
     private var lastAnalyzedTimestamp = 0L
-    private val minTimeBetweenFramesMs = 100L // ~10 FPS for ML inference
+    private val minTimeBetweenFramesMs: Long
 
     companion object {
         private const val TAG = "ImageAnalyzer"
+    }
+
+    init {
+        // Read frame capture interval from settings synchronously at initialization
+        minTimeBetweenFramesMs = runBlocking {
+            settingsRepository.settings.first().frameCaptureIntervalMs
+        }
+        Log.d(TAG, "ImageAnalyzer initialized with frame interval: ${minTimeBetweenFramesMs}ms")
     }
 
     /**

@@ -14,11 +14,14 @@
             <option value="$PROJECT_DIR$/core" />
             <option value="$PROJECT_DIR$/core/camera" />
             <option value="$PROJECT_DIR$/core/common" />
+            <option value="$PROJECT_DIR$/core/data" />
+            <option value="$PROJECT_DIR$/core/datastore" />
             <option value="$PROJECT_DIR$/core/ml" />
             <option value="$PROJECT_DIR$/core/performance" />
             <option value="$PROJECT_DIR$/domain" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/camera" />
+            <option value="$PROJECT_DIR$/feature/settings" />
           </set>
         </option>
       </GradleProjectSettings>

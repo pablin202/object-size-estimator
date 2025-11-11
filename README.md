@@ -14,17 +14,26 @@ This app demonstrates the integration of **CameraX** with **TensorFlow Lite** to
 - **Visual Feedback**: Bounding boxes with labels and measurements overlaid on camera preview
 - **Reference Object Detection**: Automatically identifies common objects (cell phone, book, bottle, etc.) as references
 - **User Controls**: Pause/Resume detection and Clear detections functionality
+- **⚙️ Configurable Settings**: Comprehensive settings screen for customizing app behavior
+  - Detection parameters (confidence threshold, max objects, same-plane threshold)
+  - Camera settings (resolution, frame capture interval)
+  - ML settings (GPU acceleration, CPU threads)
+  - Performance overlay control
+  - Customizable reference object dimensions
+- **📊 Performance Monitoring**: Real-time performance overlay with FPS, inference time, and memory usage
+- **💾 Persistent Configuration**: Settings saved using DataStore Preferences
 
 ## Technologies Used
 
 - **Minimum SDK**: API Level 21 (Android 5.0 Lollipop)
 - **Target SDK**: API Level 36
 - **Language**: Kotlin
-- **Architecture**: MVVM with Clean Architecture + Flow-based reactive streams
+- **Architecture**: Multi-Module Clean Architecture with MVVM + Flow-based reactive streams
 - **Camera**: CameraX 1.3.0
 - **Machine Learning**: TensorFlow Lite 2.16.1 with SSD MobileNet v1 (GPU accelerated)
 - **Dependency Injection**: Hilt
 - **UI Framework**: Jetpack Compose
+- **Persistence**: DataStore Preferences
 - **Concurrency**: Kotlin Coroutines & Flows
 - **Memory Leak Detection**: LeakCanary (debug builds only)
 
@@ -78,53 +87,295 @@ This app demonstrates the integration of **CameraX** with **TensorFlow Lite** to
 - **Cyan bounding boxes**: Target objects with estimated dimensions displayed
 - **Format**: Measurements shown as "Width × Height cm"
 - **Top panel**: Shows detection count and reference object status
+- **Performance Overlay** (top-right): Real-time FPS, inference time, and memory usage (can be toggled in Settings)
 
 ### Controls
 
-- **Pause/Resume**: Toggle detection processing (green when paused, red when active)
-- **Clear**: Remove all current detections from display
+- **Pause/Resume Button**: Toggle detection processing (green when paused, red when active)
+- **Clear Button**: Remove all current detections from display
+- **Snapshot Button**: Capture current performance metrics
+- **Share Button**: Export performance report
+- **Settings FAB** (bottom-right): Open settings screen
+
+### ⚙️ Settings Screen
+
+Access comprehensive app configuration via the settings button:
+
+**Detection Settings:**
+- **Confidence Threshold** (0-100%): Minimum confidence for object detection
+- **Max Objects** (1-50): Maximum number of objects to detect simultaneously
+- **Same Plane Threshold** (5-50%): Tolerance for objects on the same plane
+
+**Camera Settings:**
+- **Target Resolution**: Camera resolution (480p, 720p, 1080p)
+- **Frame Capture Interval** (33-500ms): Control detection FPS (33ms = 30 FPS, 100ms = 10 FPS)
+
+**Machine Learning:**
+- **GPU Acceleration**: Enable GPU delegate for faster inference (requires compatible device)
+- **CPU Threads** (1-8): Number of CPU threads for ML processing
+
+**Performance:**
+- **Performance Overlay**: Toggle real-time metrics display
+- **Refresh Rate** (100-5000ms): Performance metrics update frequency
+
+**Reference Object Sizes:**
+- Customize dimensions for all reference objects (cell phone, book, bottle, cup, keyboard)
+
+**Reset:** Restore all settings to default values
 
 ### Supported Reference Objects
 
-The app recognizes these common objects with known dimensions:
+The app recognizes these common objects with **customizable** dimensions (defaults shown):
 - Cell phone: 7 × 15 cm
 - Book: 15 × 23 cm
 - Bottle: 7 × 25 cm
 - Cup: 8 × 10 cm
 - Keyboard: 44 × 13 cm
 
-## Project Structure
+> 💡 **Tip**: Adjust reference object dimensions in Settings for more accurate measurements with your specific objects
+
+## 🏗️ Multi-Module Architecture
+
+This project follows **Clean Architecture** principles with a **multi-module** structure for better separation of concerns, scalability, and testability.
+
+### Module Organization
 
 ```
-app/
-├── src/main/
-│   ├── java/com/meq/objectsize/
-│   │   ├── camera/           # CameraX integration
-│   │   │   ├── CameraManager.kt
-│   │   │   └── ImageAnalyzer.kt
-│   │   ├── di/               # Dependency Injection
-│   │   │   └── AppModule.kt
-│   │   ├── domain/           # Business logic
-│   │   │   ├── SizeCalculator.kt
-│   │   │   └── model/
-│   │   │       ├── BoundingBox.kt
-│   │   │       └── DetectionResult.kt
-│   │   ├── ml/               # Machine Learning
-│   │   │   ├── ObjectDetector.kt
-│   │   │   └── TFLiteObjectDetector.kt
-│   │   ├── ui/               # User Interface
-│   │   │   ├── CameraScreen.kt
-│   │   │   ├── CameraViewModel.kt
-│   │   │   └── theme/
-│   │   ├── utils/            # Utilities
-│   │   │   ├── ImageUtils.kt
-│   │   │   └── PermissionsHelper.kt
-│   │   ├── MainActivity.kt
-│   │   └── ObjectSizeApp.kt
-│   └── assets/
-│       ├── ssd_mobilenet_v1.tflite
-│       └── labelmap.txt
+ObjectSizeEstimator/
+│
+├── :app                        # Application module (DI, MainActivity)
+│
+├── :feature                    # Feature modules (UI layer)
+│   ├── :feature:camera         # Camera feature (UI + ViewModel)
+│   └── :feature:settings       # Settings feature (UI + ViewModel)
+│
+├── :domain                     # Pure business logic (no Android dependencies)
+│   ├── entity/                 # Business entities (AppSettings, DetectionResult, etc.)
+│   ├── usecase/                # Business use cases
+│   └── repository/             # Repository interfaces (ports)
+│
+└── :core                       # Infrastructure layer
+    ├── :core:common            # Shared utilities
+    ├── :core:camera            # CameraX wrapper
+    ├── :core:ml                # TensorFlow Lite implementation
+    ├── :core:performance       # Performance monitoring
+    ├── :core:data              # Data layer (repository implementations)
+    └── :core:datastore         # DataStore preferences wrapper
 ```
+
+### Dependency Graph
+
+```
+                        ┌─────────────┐
+                        │    :app     │ (Main entry point + DI)
+                        └──────┬──────┘
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+        ▼                      ▼                      ▼
+┌────────────────┐     ┌────────────────┐    ┌────────────────┐
+│:feature:camera │     │:feature:settings│    │   :core:*      │
+│                │     │                │    │   modules      │
+└───────┬────────┘     └───────┬────────┘    └───────┬────────┘
+        │                      │                     │
+        └──────────────┬───────┴─────────────────────┘
+                       │
+                       ▼
+                ┌─────────────┐
+                │  :domain    │ (Pure business logic)
+                └─────────────┘
+                       ▲
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+        ▼              ▼              ▼
+┌─────────────┐ ┌─────────────┐ ┌─────────────┐
+│:core:data   │ │:core:ml     │ │:core:camera │
+└──────┬──────┘ └─────────────┘ └─────────────┘
+       │
+       ▼
+┌─────────────┐
+│:core:       │
+│ datastore   │
+└─────────────┘
+
+Legend:
+  :app                 → Application container + DI configuration
+  :feature:camera      → Camera UI (Compose + ViewModel)
+  :feature:settings    → Settings UI (Compose + ViewModel)
+  :domain              → Business logic (entities, use cases, ports)
+  :core:common         → Shared utilities (ImageUtils, Permissions, LeakCanary watchers)
+  :core:camera         → CameraX infrastructure (CameraManager, ImageAnalyzer)
+  :core:ml             → TensorFlow Lite adapter (ObjectDetector implementation)
+  :core:performance    → Performance monitoring implementation
+  :core:data           → Repository implementations (SettingsRepositoryImpl)
+  :core:datastore      → DataStore preferences wrapper
+```
+
+### Detailed Module Dependencies
+
+```
+:app
+ ├─ :feature:camera
+ ├─ :feature:settings
+ ├─ :domain
+ ├─ :core:common
+ ├─ :core:camera
+ ├─ :core:ml
+ ├─ :core:performance
+ ├─ :core:data
+ └─ :core:datastore
+
+:feature:camera
+ ├─ :domain
+ ├─ :core:common
+ ├─ :core:camera
+ └─ :core:performance
+
+:feature:settings
+ ├─ :domain
+ └─ :core:common
+
+:core:camera
+ ├─ :domain
+ └─ :core:common
+
+:core:ml
+ ├─ :domain
+ ├─ :core:common
+ └─ :core:performance
+
+:core:performance
+ ├─ :domain
+ └─ :core:common
+
+:core:data
+ ├─ :domain
+ ├─ :core:common
+ └─ :core:datastore
+
+:core:datastore
+ └─ :core:common
+
+:domain
+ └─ :core:common
+```
+
+### Domain Layer (Clean Architecture)
+
+The `:domain` module follows **Clean Architecture** with strict separation:
+
+```
+:domain/
+└── com.meq.objectsize.domain/
+    ├── entity/                          # Business entities (pure data)
+    │   ├── AppSettings.kt               # App configuration entity
+    │   ├── BoundingBox.kt               # Normalized bounding box (0.0-1.0)
+    │   ├── DetectionResult.kt           # ML detection result
+    │   ├── PerformanceMetrics.kt        # Performance data
+    │   └── SizeEstimate.kt              # Size calculation result
+    │
+    ├── usecase/                         # Business use cases (logic)
+    │   ├── CalculateObjectSizeUseCase.kt   # Size calculation logic
+    │   ├── FindBestReferenceUseCase.kt     # Reference object selection
+    │   ├── GetSettingsUseCase.kt           # Read app settings
+    │   └── UpdateSettingsUseCase.kt        # Update app settings
+    │
+    └── repository/                      # Repository interfaces (ports)
+        ├── ObjectDetector.kt            # ML detector contract
+        └── SettingsRepository.kt        # Settings persistence contract
+```
+
+**Key Principles:**
+- ✅ **No Android dependencies** - Pure Kotlin, 100% testable
+- ✅ **Use cases** - Single Responsibility, one action per use case
+- ✅ **Repository pattern** - Interfaces in domain, implementations in infrastructure
+- ✅ **Dependency Inversion** - High-level policy doesn't depend on low-level details
+
+### Module Responsibilities
+
+| Module | Responsibility | Dependencies |
+|--------|---------------|--------------|
+| **:app** | Application entry point, DI configuration | All modules |
+| **:feature:camera** | Camera UI, ViewModel, Compose screens | domain, core modules |
+| **:feature:settings** | Settings UI, ViewModel, Compose screens | domain, common |
+| **:domain** | Pure business logic, entities, use cases | core:common only |
+| **:core:common** | Shared utilities (no business logic) | None |
+| **:core:camera** | CameraX wrapper, image analysis | domain, common |
+| **:core:ml** | TensorFlow Lite implementation | domain, common, performance |
+| **:core:performance** | Performance monitoring & profiling | domain, common |
+| **:core:data** | Repository implementations | domain, common, datastore |
+| **:core:datastore** | DataStore preferences wrapper | common |
+
+### Benefits of Multi-Module Architecture
+
+1. **Separation of Concerns**: Clear boundaries between layers
+2. **Parallel Development**: Teams can work on different modules simultaneously
+3. **Build Time**: Gradle caches unchanged modules (faster incremental builds)
+4. **Testability**: Pure domain logic with no Android dependencies
+5. **Reusability**: Core modules can be shared across features
+6. **Scalability**: Easy to add new features as separate modules
+7. **Dependency Control**: Strict dependency rules prevent circular dependencies
+
+### 🔄 Architecture Evolution
+
+This project was refactored from a **single-module** structure to a **multi-module Clean Architecture**:
+
+**Before (Single Module):**
+```
+app/
+├── camera/              # CameraX infrastructure
+├── ml/                  # TensorFlow Lite + ObjectDetector
+├── domain/              # Mixed: business logic + performance monitoring
+│   ├── model/           # Entities
+│   ├── SizeCalculator   # Business logic (class with multiple responsibilities)
+│   ├── PerformanceMonitor    # Infrastructure in domain ❌
+│   └── ProfilerHelper        # Infrastructure in domain ❌
+└── ui/                  # Compose UI + ViewModels
+```
+
+**After (Multi-Module):**
+```
+:domain                  # Pure business logic (NO Android dependencies)
+├── entity/              # Business entities (AppSettings, DetectionResult, etc.)
+├── usecase/             # Single-responsibility use cases
+│   ├── CalculateObjectSizeUseCase
+│   ├── FindBestReferenceUseCase
+│   ├── GetSettingsUseCase
+│   └── UpdateSettingsUseCase
+└── repository/          # Interfaces (ports)
+    ├── ObjectDetector
+    └── SettingsRepository
+
+:core:performance        # Infrastructure (moved OUT of domain)
+├── PerformanceMonitor   # Metrics tracking implementation
+└── ProfilerHelper       # Performance profiling implementation
+
+:core:ml                 # ML implementation
+└── TFLiteObjectDetector # Implements ObjectDetector interface
+
+:core:data               # Data layer (NEW)
+└── SettingsRepositoryImpl # Implements SettingsRepository
+
+:core:datastore          # Persistence (NEW)
+└── SettingsDataStore    # DataStore preferences wrapper
+
+:feature:camera          # UI layer
+└── CameraViewModel      # Injects use cases (not repositories)
+
+:feature:settings        # Settings UI (NEW)
+└── SettingsViewModel    # Injects use cases for settings management
+```
+
+**Key Improvements:**
+- ✅ **Domain Purity**: Removed all Android dependencies from domain layer
+- ✅ **Single Responsibility**: Split `SizeCalculator` into focused use cases
+- ✅ **Dependency Inversion**: Repository interfaces in domain, implementations in infrastructure
+- ✅ **Separation of Concerns**: Performance monitoring moved to `core:performance`, persistence to `core:datastore`
+- ✅ **Testability**: Pure Kotlin domain logic, fully unit testable
+- ✅ **Maintainability**: Clear module boundaries and responsibilities
+- ✅ **Scalability**: Easy to add new features as independent modules (e.g., `:feature:settings`)
+- ✅ **Data Layer Separation**: Settings management split into domain (contracts), data (repository), and datastore (infrastructure)
 
 ## Assumptions and Limitations
 
@@ -150,11 +401,11 @@ app/
 
 ### Short-term Improvements
 
-1. **Custom Reference Objects**: Allow users to define custom reference objects with manual size input
+1. ~~**Custom Reference Objects**: Allow users to define custom reference objects with manual size input~~ ✅ **IMPLEMENTED** - Users can now customize reference object dimensions in Settings
 2. **Manual Reference Selection**: Let users tap to select which detected object to use as reference
 3. **Calibration Mode**: Camera calibration to improve accuracy across devices
 4. **History Feature**: Save and review previous measurements
-5. **Export Functionality**: Share measurements via image or text
+5. **Export Functionality**: Share measurements via image or text (Performance reports already exportable)
 
 ### Long-term Enhancements
 
@@ -171,14 +422,39 @@ app/
 
 ### Architecture Decisions
 
-- **MVVM Pattern**: Separates UI from business logic for testability
-- **Clean Architecture**: Domain layer independent of framework dependencies
-- **Dependency Injection**: Hilt for modular and testable components
+- **Multi-Module Architecture**: Separated into 10 modules (app, feature:camera, feature:settings, domain, core:common, core:camera, core:ml, core:performance, core:data, core:datastore)
+  - Clean separation between layers
+  - Independent build and testing per module
+  - Clear dependency flow: app → feature → domain ← core
+  - Data layer follows Repository pattern with clear separation (domain → data → datastore)
+
+- **Clean Architecture**: Strict layering with Dependency Inversion
+  - **Entities** (domain/entity): Pure business data models
+  - **Use Cases** (domain/usecase): Business logic operations
+  - **Repositories** (domain/repository): Data source contracts
+  - **Adapters** (core/*): Infrastructure implementations
+  - Domain layer has ZERO Android dependencies
+
+- **MVVM Pattern**: UI layer follows MVVM with ViewModels
+  - Separates UI from business logic for testability
+  - ViewModels inject use cases, not repositories directly
+
+- **Dependency Injection**: Hilt with multi-module configuration
+  - Use cases use `@Inject` constructor (no manual providers needed)
+  - Implementations provided in AppModule
+  - Each module can have its own DI configuration
+
 - **Flow-Based Reactive Architecture**: Modern Kotlin Flow replaces callbacks for cleaner, composable data streams
   - `SharedFlow` for hot streams (ML metrics, detections)
   - `StateFlow` for UI state management
   - Structured concurrency with proper scope cancellation
   - Built-in backpressure handling
+
+- **Use Case Pattern**: Each business operation is a separate use case
+  - `CalculateObjectSizeUseCase`: Handles size calculations
+  - `FindBestReferenceUseCase`: Selects reference objects
+  - Single Responsibility Principle
+
 - **Coroutines**: Async processing without blocking UI thread
 
 ### Memory Leak Prevention
@@ -223,10 +499,12 @@ open app/build/reports/lint-results-debug.html
 
 ### Performance Optimizations
 
-- **Frame Throttling**: 100ms minimum between frames (~10 FPS)
-- **Background Processing**: ML inference on background thread
+- **Configurable Frame Throttling**: User-adjustable interval between frames (33-500ms) via Settings
+- **Background Processing**: ML inference on background thread (Dispatchers.Default)
 - **Buffer Reuse**: Pre-allocated ByteBuffer for image preprocessing
 - **Singleton Pattern**: Single TFLite interpreter instance
+- **GPU Acceleration**: Optional GPU delegate for faster inference (toggleable in Settings)
+- **Adjustable CPU Threads**: Configure thread count (1-8) for CPU inference via Settings
 
 ### Camera Integration
 
@@ -250,10 +528,18 @@ The project includes unit tests covering core business logic and architecture pa
 ### Unit Tests
 
 **Domain Layer Tests:**
-- `SizeCalculatorTest`: Pure logic tests for size estimation calculations
+- `CalculateObjectSizeUseCaseTest`: Pure logic tests for size estimation calculations
   - Reference object dimension validation
   - Proportional size calculations
+  - Same plane detection algorithm
   - Edge cases and null handling
+  - Zero Android dependencies (pure Kotlin)
+
+- `FindBestReferenceUseCaseTest`: Reference object selection logic
+  - Preferred object priority ordering
+  - Confidence threshold filtering
+  - Fallback to highest confidence
+  - Known object sizes mapping
 
 - `PerformanceMonitorTest`: Metrics aggregation and FPS calculations
   - Rolling window behavior (30 samples max)
@@ -267,6 +553,7 @@ The project includes unit tests covering core business logic and architecture pa
   - Flow collection from `CameraManager`
   - User action handling (pause, clear, snapshot)
   - Uses MockK for mocking and Turbine for Flow testing
+  - Tests use case integration (not direct repository access)
 
 ### Running Tests
 
@@ -427,6 +714,8 @@ The project includes instrumented tests that run on an Android device/emulator t
 ### Object Detection
 <img src="screenshots/app_detection.jpg" width="250"/>
 
+### Settings Screen
+<img src="screenshots/settings.jpg" width="250"/>
 
 </div>
 

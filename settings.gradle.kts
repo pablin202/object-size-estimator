@@ -27,12 +27,15 @@ include(":app")
 
 // Feature modules
 include(":feature:camera")
+include(":feature:settings")
 
 // Domain module (Clean Architecture - business logic, independent of everything)
 include(":domain")
 
 // Core modules (Infrastructure)
 include(":core:common")
+include(":core:data")
+include(":core:datastore")
 include(":core:ml")
 include(":core:camera")
 include(":core:performance")

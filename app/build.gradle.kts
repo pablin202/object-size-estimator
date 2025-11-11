@@ -93,12 +93,15 @@ hilt {
 dependencies {
     // Feature modules
     implementation(project(":feature:camera"))
+    implementation(project(":feature:settings"))
 
     // Domain (needed for DI providers)
     implementation(project(":domain"))
 
     // Core modules (needed for DI providers)
     implementation(project(":core:common"))
+    implementation(project(":core:data"))
+    implementation(project(":core:datastore"))
     implementation(project(":core:ml"))
     implementation(project(":core:camera"))
     implementation(project(":core:performance"))

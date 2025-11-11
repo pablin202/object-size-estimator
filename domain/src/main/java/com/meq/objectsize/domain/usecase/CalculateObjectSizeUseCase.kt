@@ -22,12 +22,15 @@ class CalculateObjectSizeUseCase @Inject constructor() {
 
     /**
      * Calculate target object's real-world dimensions
+     *
+     * @param samePlaneThreshold Threshold for determining if objects are in same plane (0.0-1.0)
      */
     operator fun invoke(
         referenceBox: BoundingBox,
         targetBox: BoundingBox,
         referenceRealWidth: Float,
-        referenceRealHeight: Float
+        referenceRealHeight: Float,
+        samePlaneThreshold: Float = SAME_PLANE_THRESHOLD
     ): SizeEstimate? {
         // Validate inputs
         if (!referenceBox.isValid() || !targetBox.isValid()) {
@@ -39,7 +42,7 @@ class CalculateObjectSizeUseCase @Inject constructor() {
         }
 
         // Check if objects are roughly in same plane
-        if (!areObjectsInSamePlane(referenceBox, targetBox)) {
+        if (!areObjectsInSamePlane(referenceBox, targetBox, samePlaneThreshold)) {
             return null
         }
 

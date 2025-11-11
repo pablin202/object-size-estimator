@@ -2,6 +2,7 @@ package com.meq.objectsize.core.camera
 
 import android.content.Context
 import android.util.Log
+import android.util.Size
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -10,6 +11,7 @@ import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
 import com.meq.objectsize.domain.entity.DetectionResult
 import com.meq.objectsize.domain.entity.PerformanceMetrics
+import com.meq.objectsize.domain.repository.SettingsRepository
 import com.meq.objectsize.core.common.LeakCanaryWatchers
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -19,8 +21,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import javax.inject.Inject
@@ -43,7 +47,8 @@ import javax.inject.Singleton
 @Singleton
 class CameraManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
-    private val imageAnalyzer: ImageAnalyzer
+    private val imageAnalyzer: ImageAnalyzer,
+    private val settingsRepository: SettingsRepository
 ) {
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageAnalysis: ImageAnalysis? = null
@@ -91,8 +96,14 @@ class CameraManager @Inject constructor(
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
 
+            // Get current settings for target resolution
+            val settings = runBlocking { settingsRepository.settings.first() }
+
             // Setup image analysis
             imageAnalysis = ImageAnalysis.Builder()
+                .setTargetResolution(
+                    Size(settings.targetResolutionWidth, settings.targetResolutionHeight)
+                )
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also { analysis ->

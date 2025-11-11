@@ -3,6 +3,11 @@ package com.meq.objectsize.feature.camera
 import android.view.ViewGroup
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,9 +29,11 @@ import kotlinx.coroutines.launch
  * - Real-time object detection overlay
  * - Size measurements display
  * - Control buttons
+ * - Settings navigation
  */
 @Composable
 fun CameraScreen(
+    onNavigateToSettings: () -> Unit = {},
     viewModel: CameraViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -35,6 +42,7 @@ fun CameraScreen(
 
     val uiState by viewModel.uiState.collectAsState()
     val metrics by viewModel.performanceMetrics.collectAsState()
+    val settings by viewModel.currentSettings.collectAsState()
 
     // PreviewView for CameraX
     val previewView = remember {
@@ -88,11 +96,13 @@ fun CameraScreen(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Performance overlay (right)
-            PerformanceOverlay(
-                metrics = metrics,
-                modifier = Modifier.weight(1f, fill = false)
-            )
+            // Performance overlay (right) - only show if enabled in settings
+            if (settings.showPerformanceOverlay) {
+                PerformanceOverlay(
+                    metrics = metrics,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
         }
 
         // Control buttons at bottom
@@ -106,6 +116,20 @@ fun CameraScreen(
                 .align(Alignment.BottomCenter)
                 .padding(16.dp)
         )
+
+        // Settings button (FAB in top-right)
+        FloatingActionButton(
+            onClick = onNavigateToSettings,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp),
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Icon(
+                imageVector = Icons.Default.Settings,
+                contentDescription = "Settings"
+            )
+        }
     }
 }
 
