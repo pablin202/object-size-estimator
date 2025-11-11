@@ -21,4 +21,18 @@ dependencyResolutionManagement {
 
 
 rootProject.name = "ObjectSizeEstimator"
+
+// App module
 include(":app")
+
+// Feature modules
+include(":feature:camera")
+
+// Domain module (Clean Architecture - business logic, independent of everything)
+include(":domain")
+
+// Core modules (Infrastructure)
+include(":core:common")
+include(":core:ml")
+include(":core:camera")
+include(":core:performance")

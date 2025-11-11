@@ -23,9 +23,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.meq.objectsize.ui.CameraScreen
+import com.meq.objectsize.feature.camera.CameraScreen
 import com.meq.objectsize.ui.theme.ObjectSizeEstimatorTheme
-import com.meq.objectsize.utils.PermissionsHelper
+import com.meq.objectsize.core.common.PermissionsHelper
 import dagger.hilt.android.AndroidEntryPoint
 
 /**

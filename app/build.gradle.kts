@@ -91,41 +91,42 @@ hilt {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.material3)
+    // Feature modules
+    implementation(project(":feature:camera"))
+
+    // Domain (needed for DI providers)
+    implementation(project(":domain"))
+
+    // Core modules (needed for DI providers)
+    implementation(project(":core:common"))
+    implementation(project(":core:ml"))
+    implementation(project(":core:camera"))
+    implementation(project(":core:performance"))
 
     // AndroidX Core
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.constraintlayout)
 
-    // Lifecycle (ViewModel, runtime)
-    implementation(libs.bundles.androidx.lifecycle)
+    // Compose
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.ui.tooling.preview)
+    implementation(libs.androidx.compose.material3)
+    debugImplementation(libs.androidx.compose.ui.tooling)
 
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
 
-    // CameraX
-    implementation(libs.bundles.camerax)
-
-    // TensorFlow Lite
-    implementation(libs.bundles.tensorflow)
-
-    // Coroutines
-    implementation(libs.bundles.coroutines)
-
     // LeakCanary - Memory leak detection (DEBUG only)
     debugImplementation(libs.leakcanary.android)
     // Plumber - Detects Android framework leaks (Activity, Fragment, ViewModel, etc.)
     debugImplementation(libs.plumber.android)
-    // Note: leakcanary-object-watcher-android is included transitively in leakcanary-android
 
     // Testing
     testImplementation(libs.junit)

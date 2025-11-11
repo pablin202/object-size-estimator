@@ -1,11 +1,10 @@
 package com.meq.objectsize.di
 
 import android.content.Context
-import com.meq.objectsize.domain.PerformanceMonitor
-import com.meq.objectsize.domain.ProfilerHelper
-import com.meq.objectsize.domain.SizeCalculator
-import com.meq.objectsize.ml.ObjectDetector
-import com.meq.objectsize.ml.TFLiteObjectDetector
+import com.meq.objectsize.core.performance.PerformanceMonitor
+import com.meq.objectsize.core.performance.ProfilerHelper
+import com.meq.objectsize.domain.repository.ObjectDetector
+import com.meq.objectsize.core.ml.TFLiteObjectDetector
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,9 +17,10 @@ import javax.inject.Singleton
  *
  * Provides:
  * - ObjectDetector (TFLite implementation)
- * - SizeCalculator (domain logic)
+ * - PerformanceMonitor (metrics tracking)
+ * - ProfilerHelper (performance profiling)
  *
- * Note: ImageAnalyzer and CameraManager use @Inject constructor
+ * Note: Use cases and other classes use @Inject constructor
  * so they don't need @Provides methods
  */
 @Module
@@ -50,17 +50,6 @@ object AppModule {
             performanceMonitor = performanceMonitor,
             profilerHelper = profilerHelper
         )
-    }
-
-    /**
-     * Provide SizeCalculator
-     *
-     * Singleton because it's stateless
-     */
-    @Provides
-    @Singleton
-    fun provideSizeCalculator(): SizeCalculator {
-        return SizeCalculator()
     }
 
     /**
