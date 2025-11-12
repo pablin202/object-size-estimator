@@ -1,8 +1,10 @@
 package com.meq.objectsize.core.ml
 
 import android.content.Context
+import androidx.core.graphics.scale
 import android.graphics.Bitmap
 import android.os.Trace
+import com.meq.objectsize.domain.entity.ImageData
 import android.util.Log
 import com.meq.objectsize.domain.entity.BoundingBox
 import com.meq.objectsize.domain.entity.DetectionResult
@@ -214,7 +216,7 @@ class TFLiteObjectDetector(
         return fileChannel.map(FileChannel.MapMode.READ_ONLY, startOffset, declaredLength)
     }
 
-    override suspend fun detect(bitmap: Bitmap): List<DetectionResult> = trace("ML_Detection") {
+    override suspend fun detect(image: ImageData): List<DetectionResult> = trace("ML_Detection") {
         withContext(Dispatchers.Default) {
             val totalStartTime = System.nanoTime()
 
@@ -227,7 +229,7 @@ class TFLiteObjectDetector(
             // 1. Preprocessing
             val preprocessStart = System.nanoTime()
             val preprocessTime = trace("Preprocessing") {
-                preprocessBitmap(bitmap, buffer)
+                preprocessImage(image, buffer)
                 (System.nanoTime() - preprocessStart) / 1_000_000 // ms
             }
 
@@ -340,8 +342,11 @@ class TFLiteObjectDetector(
      * - Convert to UInt8
      * - Keep in 0-255 range (no normalization needed)
      */
-    private fun preprocessBitmap(bitmap: Bitmap, buffer: ByteBuffer) {
+    private fun preprocessImage(image: ImageData, buffer: ByteBuffer) {
         buffer.rewind()
+
+        // Convert ImageData to Bitmap for resizing
+        val bitmap = image.toBitmap()
 
         // Resize bitmap to model input size
         val resizedBitmap = bitmap.scale(INPUT_SIZE, INPUT_SIZE)
@@ -362,9 +367,12 @@ class TFLiteObjectDetector(
                 buffer.put((value and 0xFF).toByte())            // B
             }
         }
-
-        // Clean up resized bitmap if it's different from original
         if (resizedBitmap != bitmap) {
+        // Clean up bitmaps
+        if (resizedBitmap != bitmap) {
+            resizedBitmap.recycle()
+        }
+        bitmap.recycle()
             resizedBitmap.recycle()
         }
     }

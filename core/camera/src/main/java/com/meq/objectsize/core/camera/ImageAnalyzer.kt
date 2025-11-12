@@ -1,6 +1,8 @@
 package com.meq.objectsize.core.camera
 
 import android.graphics.Bitmap
+import com.meq.objectsize.domain.entity.ImageData
+import com.meq.objectsize.core.ml.toImageData
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.camera.core.ExperimentalGetImage
@@ -101,7 +103,8 @@ class ImageAnalyzer @Inject constructor(
                 val bitmap = imageProxyToBitmap(imageProxy)
 
                 // Run object detection
-                val detections = objectDetector.detect(bitmap)
+                val imageData = bitmap.toImageData()
+                val detections = objectDetector.detect(imageData)
 
                 // Emit results via Flow (non-blocking)
                 // tryEmit: doesn't suspend, returns false if buffer full

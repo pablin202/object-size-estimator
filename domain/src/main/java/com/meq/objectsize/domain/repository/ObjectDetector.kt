@@ -1,7 +1,7 @@
 package com.meq.objectsize.domain.repository
 
-import android.graphics.Bitmap
 import com.meq.objectsize.domain.entity.DetectionResult
+import com.meq.objectsize.domain.entity.ImageData
 import com.meq.objectsize.domain.entity.PerformanceMetrics
 import kotlinx.coroutines.flow.SharedFlow
 
@@ -14,8 +14,7 @@ import kotlinx.coroutines.flow.SharedFlow
  * - Memory leak safe
  * - Composable with operators
  *
- * Using Bitmap as input since it's Android-specific and easier to work with
- * from CameraX image analysis
+ * Using ImageData as input to keep the domain layer platform-agnostic
  */
 interface ObjectDetector {
 
@@ -30,12 +29,12 @@ interface ObjectDetector {
     val metricsFlow: SharedFlow<PerformanceMetrics>
 
     /**
-     * Detect objects in a bitmap image
+     * Detect objects in an image
      *
-     * @param bitmap Input image
+     * @param image Input image data
      * @return List of detected objects with bounding boxes and confidence
      */
-    suspend fun detect(bitmap: Bitmap): List<DetectionResult>
+    suspend fun detect(image: ImageData): List<DetectionResult>
 
     /**
      * Check if detector is ready to use
